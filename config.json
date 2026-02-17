@@ -1,0 +1,12 @@
+{
+    "camera": {
+        "width": 1920,
+        "height": 1080,
+        "frameRate": 30
+    },
+    "model": {
+        "complexity": 0,
+        "minimum detection confidence": 0.5,
+        "minimum tracking confidence": 0.5
+    }
+}
