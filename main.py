@@ -11,6 +11,7 @@ with open("config.json", "r") as file:
 
 ### INIT
 mouse_down = False
+right_mouse_down = False
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
@@ -40,15 +41,17 @@ def get_hand_size(landmarks):
     return math.hypot(middle_x - wrist_x, middle_y - wrist_y)
 
 def update_cursor(landmarks):
-    global mouse_down
+    global mouse_down, right_mouse_down
 
     thumb = landmarks.landmark[4]
     index = landmarks.landmark[8]
+    middle = landmarks.landmark[12]
 
     # Convert normalized coordinates to camera pixel coordinates
     h, w = frame.shape[:2]
     thumb_x, thumb_y = int(thumb.x * w), int(thumb.y * h)
     index_x, index_y = int(index.x * w), int(index.y * h)
+    middle_x, middle_y = int(middle.x * w), int(middle.y * h)
 
     # Convert camera pixel coordinates to screen pixel coordinates
     screen_w = win32api.GetSystemMetrics(0)
@@ -56,17 +59,28 @@ def update_cursor(landmarks):
     cursor_x, cursor_y = (w - thumb_x)*screen_w//w, thumb_y*screen_h//h
 
     win32api.SetCursorPos((cursor_x, cursor_y))
-    distance = math.hypot(index_x - thumb_x, index_y - thumb_y)
+    # Distances
+    index_thumb_dist = math.hypot(index_x - thumb_x, index_y - thumb_y)
+    middle_thumb_dist = math.hypot(middle_x - thumb_x, middle_y - thumb_y)
 
-    # Click detection logic
-    if distance < get_hand_size(landmarks) * 0.3:
+    pinch_threshold = get_hand_size(landmarks) * 0.3
+
+    # ---------------- LEFT CLICK (thumb + index) ----------------
+    if index_thumb_dist < pinch_threshold:
         if not mouse_down:
             win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
             mouse_down = True
+    elif middle_thumb_dist < pinch_threshold:
+        if not right_mouse_down:
+            win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, 0, 0)
+            right_mouse_down = True
     else:
         if mouse_down:
             win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
             mouse_down = False
+        if right_mouse_down:
+            win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0)
+            right_mouse_down = False
 
 def is_stop_requested():
     tab = win32api.GetAsyncKeyState(win32con.VK_TAB)
