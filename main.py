@@ -13,6 +13,9 @@ with open("config.json", "r") as file:
 mouse_down = False
 right_mouse_down = False
 
+smooth_x, smooth_y = 0, 0
+SMOOTHING = 0.2   # 0.1 = very smooth, 0.3 = more responsive
+
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
     max_num_hands=1,
@@ -20,8 +23,6 @@ hands = mp_hands.Hands(
     min_detection_confidence=options["model"]["minimum detection confidence"],
     min_tracking_confidence=options["model"]["minimum tracking confidence"]
 )
-
-mp_drawing = mp.solutions.drawing_utils
 
 capture = cv2.VideoCapture(0)
 capture.set(cv2.CAP_PROP_FRAME_WIDTH, options["camera"]["width"])
@@ -41,11 +42,12 @@ def get_hand_size(landmarks):
     return math.hypot(middle_x - wrist_x, middle_y - wrist_y)
 
 def update_cursor(landmarks):
-    global mouse_down, right_mouse_down
+    global mouse_down, right_mouse_down, smooth_x, smooth_y, SMOOTHING
 
     thumb = landmarks.landmark[4]
     index = landmarks.landmark[8]
     middle = landmarks.landmark[12]
+    palm_center = landmarks.landmark[5]
 
     # Convert normalized coordinates to camera pixel coordinates
     h, w = frame.shape[:2]
@@ -56,16 +58,22 @@ def update_cursor(landmarks):
     # Convert camera pixel coordinates to screen pixel coordinates
     screen_w = win32api.GetSystemMetrics(0)
     screen_h = win32api.GetSystemMetrics(1)
-    cursor_x, cursor_y = (w - thumb_x)*screen_w//w, thumb_y*screen_h//h
 
-    win32api.SetCursorPos((cursor_x, cursor_y))
+    target_x = (w - thumb_x) * screen_w // w
+    target_y = thumb_y * screen_h // h
+
+    smooth_x = int(smooth_x + (target_x - smooth_x) * SMOOTHING)
+    smooth_y = int(smooth_y + (target_y - smooth_y) * SMOOTHING)
+
+    win32api.SetCursorPos((smooth_x, smooth_y))
+
     # Distances
     index_thumb_dist = math.hypot(index_x - thumb_x, index_y - thumb_y)
     middle_thumb_dist = math.hypot(middle_x - thumb_x, middle_y - thumb_y)
 
     pinch_threshold = get_hand_size(landmarks) * 0.3
 
-    # ---------------- LEFT CLICK (thumb + index) ----------------
+    # Click detection logic
     if index_thumb_dist < pinch_threshold:
         if not mouse_down:
             win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0)
@@ -83,9 +91,9 @@ def update_cursor(landmarks):
             right_mouse_down = False
 
 def is_stop_requested():
-    tab = win32api.GetAsyncKeyState(win32con.VK_TAB)
-    esc = win32api.GetAsyncKeyState(win32con.VK_ESCAPE)
-    return (tab & 0x8000) and (esc & 1)
+    esc = win32api.GetAsyncKeyState(win32con.VK_ESCAPE) & 0x8000
+    shift = win32api.GetAsyncKeyState(win32con.VK_SHIFT) & 0x8000
+    return esc and shift
 
 ### VIDEO STREAM PROCESSING
 while capture.isOpened():
@@ -102,7 +110,10 @@ while capture.isOpened():
         update_cursor(hand_landmarks)
 
         if is_stop_requested():
-            print("jarvis got killed")
+            if mouse_down:
+                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+            if right_mouse_down:
+                win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0)
             break
 
 capture.release()
