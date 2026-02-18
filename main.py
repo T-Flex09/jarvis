@@ -13,8 +13,8 @@ with open("config.json", "r") as file:
 mouse_down = False
 right_mouse_down = False
 
-smooth_x, smooth_y = 0, 0
-SMOOTHING = 0.2   # 0.1 = very smooth, 0.3 = more responsive
+smooth_x, smooth_y = win32api.GetCursorPos()
+SMOOTHING = options["cursor"]["smoothing"]   # 0.1 = very smooth, 0.3 = more responsive
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
@@ -54,14 +54,16 @@ def update_cursor(landmarks):
     thumb_x, thumb_y = int(thumb.x * w), int(thumb.y * h)
     index_x, index_y = int(index.x * w), int(index.y * h)
     middle_x, middle_y = int(middle.x * w), int(middle.y * h)
+    palm_center_x, palm_center_y = int(palm_center.x * w), int(palm_center.y * h)
 
     # Convert camera pixel coordinates to screen pixel coordinates
     screen_w = win32api.GetSystemMetrics(0)
     screen_h = win32api.GetSystemMetrics(1)
 
-    target_x = (w - thumb_x) * screen_w // w
-    target_y = thumb_y * screen_h // h
+    target_x = (w - palm_center_x) * screen_w // w
+    target_y = palm_center_y * screen_h // h
 
+    # Proportional controller for smoother cursor movement
     smooth_x = int(smooth_x + (target_x - smooth_x) * SMOOTHING)
     smooth_y = int(smooth_y + (target_y - smooth_y) * SMOOTHING)
 

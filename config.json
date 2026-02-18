@@ -8,5 +8,8 @@
         "complexity": 0,
         "minimum detection confidence": 0.5,
         "minimum tracking confidence": 0.5
+    },
+    "cursor": {
+        "smoothing": 0.3
     }
 }
