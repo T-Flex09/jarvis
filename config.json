@@ -10,6 +10,6 @@
         "minimum tracking confidence": 0.5
     },
     "cursor": {
-        "smoothing": 0.3
+        "smoothing": 0.5
     }
 }

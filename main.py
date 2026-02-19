@@ -14,7 +14,7 @@ mouse_down = False
 right_mouse_down = False
 
 smooth_x, smooth_y = win32api.GetCursorPos()
-SMOOTHING = options["cursor"]["smoothing"]   # 0.1 = very smooth, 0.3 = more responsive
+SMOOTHING = options["cursor"]["smoothing"]   # between 0 and 1
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
