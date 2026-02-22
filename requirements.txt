@@ -1,1 +1,3 @@
-pywin32 mediapipe opencv-python
+pywin32
+mediapipe
+opencv-python
