@@ -12,9 +12,10 @@ with open("config.json", "r") as file:
 ### INIT
 mouse_down = False
 right_mouse_down = False
+canStillRun = True
 
 smooth_x, smooth_y = win32api.GetCursorPos()
-SMOOTHING = options["cursor"]["smoothing"]   # between 0 and 1
+SMOOTHING = options["cursor"]["smoothing"] # between 0.1 and 0.5, from least to most responsive
 
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
@@ -30,6 +31,18 @@ capture.set(cv2.CAP_PROP_FRAME_HEIGHT, options["camera"]["height"])
 capture.set(cv2.CAP_PROP_FPS, options["camera"]["frameRate"])
 
 ### FUNCTIONS
+# Source - https://stackoverflow.com/a/1969274
+# Posted by Adam Luchjenbroers, modified by community. See post 'Timeline' for change history
+# Retrieved 2026-02-22, License - CC BY-SA 2.5
+
+def mapToRange(value, leftMin, leftMax, rightMin, rightMax):
+    leftSpan = leftMax - leftMin
+    rightSpan = rightMax - rightMin
+
+    valueScaled = float(value - leftMin) / float(leftSpan)
+
+    return rightMin + int(valueScaled * rightSpan)
+
 def get_hand_size(landmarks):
     wrist = landmarks.landmark[0]
     middle_mcp = landmarks.landmark[9]
@@ -60,8 +73,9 @@ def update_cursor(landmarks):
     screen_w = win32api.GetSystemMetrics(0)
     screen_h = win32api.GetSystemMetrics(1)
 
-    target_x = (w - palm_center_x) * screen_w // w
-    target_y = palm_center_y * screen_h // h
+    hand_size = get_hand_size(landmarks)
+    target_x = mapToRange(palm_center_x, hand_size, w-hand_size, screen_w, 0)
+    target_y = mapToRange(palm_center_y, hand_size, h-hand_size, 0, screen_h)
 
     # Proportional controller for smoother cursor movement
     smooth_x = int(smooth_x + (target_x - smooth_x) * SMOOTHING)
@@ -73,7 +87,7 @@ def update_cursor(landmarks):
     index_thumb_dist = math.hypot(index_x - thumb_x, index_y - thumb_y)
     middle_thumb_dist = math.hypot(middle_x - thumb_x, middle_y - thumb_y)
 
-    pinch_threshold = get_hand_size(landmarks) * 0.3
+    pinch_threshold = hand_size * 0.3
 
     # Click detection logic
     if index_thumb_dist < pinch_threshold:
@@ -92,16 +106,17 @@ def update_cursor(landmarks):
             win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0)
             right_mouse_down = False
 
-def is_stop_requested():
-    esc = win32api.GetAsyncKeyState(win32con.VK_ESCAPE) & 0x8000
-    shift = win32api.GetAsyncKeyState(win32con.VK_SHIFT) & 0x8000
-    return esc and shift
+def is_stop_requested(landmarks):
+    return False# will change later to a fist gesture
 
 ### VIDEO STREAM PROCESSING
-while capture.isOpened():
+while canStillRun:
     ret, frame = capture.read()
     if not ret:
         break
+
+    if options["camera"]["showfeed"]:
+        cv2.imshow("debug", frame)
 
     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     image.flags.writeable = False
@@ -111,12 +126,18 @@ while capture.isOpened():
         hand_landmarks = results.multi_hand_landmarks[0]
         update_cursor(hand_landmarks)
 
-        if is_stop_requested():
-            if mouse_down:
-                win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
-            if right_mouse_down:
-                win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0)
-            break
+        if options["camera"]["showfeed"]:
+            #will do stuff later to make this work
+            pass
+
+        if is_stop_requested(hand_landmarks):
+            canStillRun = False
+    if cv2.waitKey(15) == 27:
+        if mouse_down:
+            win32api.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0)
+        if right_mouse_down:
+            win32api.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0)
+        break
 
 capture.release()
 cv2.destroyAllWindows()

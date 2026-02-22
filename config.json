@@ -2,7 +2,8 @@
     "camera": {
         "width": 1920,
         "height": 1080,
-        "frameRate": 30
+        "frameRate": 30,
+        "showfeed": false
     },
     "model": {
         "complexity": 0,
@@ -10,6 +11,6 @@
         "minimum tracking confidence": 0.5
     },
     "cursor": {
-        "smoothing": 0.5
+        "smoothing": 0.3
     }
 }
