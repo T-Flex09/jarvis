@@ -31,10 +31,6 @@ capture.set(cv2.CAP_PROP_FRAME_HEIGHT, options["camera"]["height"])
 capture.set(cv2.CAP_PROP_FPS, options["camera"]["frameRate"])
 
 ### FUNCTIONS
-# Source - https://stackoverflow.com/a/1969274
-# Posted by Adam Luchjenbroers, modified by community. See post 'Timeline' for change history
-# Retrieved 2026-02-22, License - CC BY-SA 2.5
-
 def mapToRange(value, leftMin, leftMax, rightMin, rightMax):
     leftSpan = leftMax - leftMin
     rightSpan = rightMax - rightMin
@@ -74,8 +70,8 @@ def update_cursor(landmarks):
     screen_h = win32api.GetSystemMetrics(1)
 
     hand_size = get_hand_size(landmarks)
-    target_x = mapToRange(palm_center_x, hand_size, w-hand_size, screen_w, 0)
-    target_y = mapToRange(palm_center_y, hand_size, h-hand_size, 0, screen_h)
+    target_x = mapToRange(palm_center_x, hand_size*1.3, w-hand_size*1.3, screen_w, 0)
+    target_y = mapToRange(palm_center_y, hand_size*1.3, h-hand_size*1.3, 0, screen_h)
 
     # Proportional controller for smoother cursor movement
     smooth_x = int(smooth_x + (target_x - smooth_x) * SMOOTHING)
